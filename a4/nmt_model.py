@@ -272,8 +272,15 @@ class NMT(nn.Module):
         ###         https://pytorch.org/docs/stable/torch.html#torch.stack
 
 
+        enc_hiddens_proj = self.att_projection(enc_hiddens)
+        Y = self.model_embeddings.target(target_padded)
+        for y_t in torch.split(Y, 1, dim = 0):
+            Ybar_t = torch.cat((y_t.squeeze(0), o_prev), dim=-1)
+            dec_state, o_t, _ = self.step(Ybar_t, dec_state, enc_hiddens, enc_hiddens_proj, enc_masks)
+            combined_outputs.append(o_t)
+            o_prev = o_t
 
-
+        combined_outputs = torch.stack(combined_outputs, dim=0)
 
 
         ### END YOUR CODE
@@ -334,6 +341,17 @@ class NMT(nn.Module):
         ###         https://pytorch.org/docs/stable/torch.html#torch.squeeze
 
 
+        dec_state = self.decoder(Ybar_t, dec_state)
+        dec_hidden, dec_cell = dec_state # (b, h)
+
+        #print(dec_hidden.unsqueeze(2).shape)
+
+        #print(enc_hiddens_proj.shape) # (b, src_len, h) := (5, 22, 3)
+
+        # (b, h).T @ (b, src_len, h) @ (b, src_len, h * 2)
+        e_t = torch.bmm(enc_hiddens_proj, dec_hidden.unsqueeze(2)).squeeze(2)
+
+        #print('e_t:', e_t.shape)
 
 
         ### END YOUR CODE
@@ -370,8 +388,20 @@ class NMT(nn.Module):
         ###     Tanh:
         ###         https://pytorch.org/docs/stable/torch.html#torch.tanh
 
+        softmax = nn.Softmax()
 
+        alpha_t = softmax(e_t) # (b, src_len)
 
+        #print('enc_hiddens:', enc_hiddens.shape)
+        #print('alpha_t:', alpha_t.shape)
+        a_t = torch.bmm(alpha_t.unsqueeze(1), enc_hiddens).squeeze(1)
+
+        U_t = torch.cat((dec_hidden, a_t), dim=1) # (b, h), (b, 2h)
+
+        V_t = self.combined_output_projection(U_t)
+
+        O_t = torch.tanh(V_t)
+        O_t = self.dropout(O_t)
 
 
         ### END YOUR CODE
