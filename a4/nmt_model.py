@@ -388,9 +388,7 @@ class NMT(nn.Module):
         ###     Tanh:
         ###         https://pytorch.org/docs/stable/torch.html#torch.tanh
 
-        softmax = nn.Softmax()
-
-        alpha_t = softmax(e_t) # (b, src_len)
+        alpha_t = F.softmax(e_t, dim=1) # (b, src_len)
 
         #print('enc_hiddens:', enc_hiddens.shape)
         #print('alpha_t:', alpha_t.shape)
