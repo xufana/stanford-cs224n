@@ -35,7 +35,11 @@ def pad_sents(sents, pad_token):
 
     ### YOUR CODE HERE (~6 Lines)
 
+    length = max([len(i) for i in sents])
 
+    for sent in sents:
+        diff = length - len(sent)
+        sents_padded.append(sent + [pad_token] * diff)
 
     ### END YOUR CODE
 
